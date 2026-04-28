@@ -1,0 +1,459 @@
+/* global React */
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ----- Helpers -----
+function flattenProjects(groups) {
+  return groups.flatMap(g => g.projects.map(p => ({ ...p, groupId: g.id, groupLabel: g.label })));
+}
+
+function PreviewIframe({ url, title }) {
+  // Live iframe of the actual site, scaled down. Click events disabled so card
+  // remains the clickable surface.
+  return (
+    <iframe
+      src={url}
+      title={title}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      sandbox="allow-scripts allow-same-origin"
+    />
+  );
+}
+
+function PreviewFallback({ name }) {
+  // Used when iframe is blocked or for visual variety
+  return (
+    <div className="preview-fallback">— {name} —</div>
+  );
+}
+
+// ============================================================
+// VIEW: INDEX (numbered sticky list)
+// ============================================================
+function IndexView({ data, onOpen }) {
+  return (
+    <div className="view-index">
+      {data.groups.map((g, gi) => (
+        <section key={g.id} className="group">
+          <div className="group-meta">
+            <div className="num">/ {String(gi + 1).padStart(2, '0')}</div>
+            <div className="accent" />
+            <h3>{g.label}</h3>
+            <p>{g.blurb}</p>
+            <div style={{ marginTop: 16, fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#8D8D92' }}>
+              {g.projects.length} project{g.projects.length === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div>
+            {g.projects.map((p, pi) => (
+              <div key={p.id} className="idx-row" onClick={() => onOpen(p)}>
+                <div className="idx-num">{String(pi + 1).padStart(2, '0')}</div>
+                <div className="idx-name">
+                  {p.name}
+                  <span className="sub">{p.subtitle}</span>
+                </div>
+                <div className="idx-meta">
+                  <span className="lbl">For</span>
+                  {p.for}
+                </div>
+                <div className="idx-stack">
+                  {p.stack.slice(0, 3).join(' · ')}
+                </div>
+                <div className="idx-arrow">→</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// VIEW: EDITORIAL (featured + sidebar)
+// ============================================================
+function EditorialView({ data, onOpen }) {
+  const flat = flattenProjects(data.groups);
+  const featured = flat.filter(p => p.featured);
+  const initial = featured[0] || flat[0];
+  const [activeId, setActiveId] = useState(initial.id);
+  const active = flat.find(p => p.id === activeId) || initial;
+
+  return (
+    <div className="view-edit">
+      <div className="layout">
+        {/* FEATURE CARD */}
+        <div className="feature">
+          <div className="browser-chrome">
+            <div className="dot" />
+            <div className="dot" />
+            <div className="dot" />
+            <div className="url">{active.url.replace(/^https?:\/\//, '')}</div>
+          </div>
+          <div className="preview">
+            <PreviewIframe url={active.url} title={active.name} />
+          </div>
+          <div className="body">
+            <div className="eyebrow">
+              <span style={{ color: '#22C55E' }}>●</span>
+              {active.sector} · {active.groupLabel}
+            </div>
+            <h3>{active.name}</h3>
+            <div className="sub">{active.subtitle}</div>
+            <p className="summary">{active.summary}</p>
+            <div className="meta-grid">
+              <div>
+                <div className="lbl">For</div>
+                <div className="val">{active.for}</div>
+              </div>
+              <div>
+                <div className="lbl">Why it matters</div>
+                <div className="val">{active.why}</div>
+              </div>
+              <div>
+                <div className="lbl">Stack</div>
+                <div className="val mono" style={{ fontSize: 12 }}>{active.stack.join(' · ')}</div>
+              </div>
+              <div>
+                <div className="lbl">Status</div>
+                <div className="val mono" style={{ fontSize: 12 }}>
+                  <span style={{ color: '#22C55E' }}>●</span> {active.status}
+                </div>
+              </div>
+            </div>
+            <div className="actions">
+              <a href={active.url} target="_blank" rel="noreferrer" className="btn-cta">Visit site →</a>
+              {active.repo && (
+                <a
+                  href={`https://github.com/${active.repo}`}
+                  target="_blank" rel="noreferrer"
+                  className="btn-secondary"
+                >
+                  {active.repoPrivate ? 'Repo (private)' : 'View repo'}
+                </a>
+              )}
+              <button className="btn-secondary" onClick={() => onOpen(active)}>Details</button>
+            </div>
+          </div>
+        </div>
+
+        {/* SIDEBAR LIST */}
+        <aside className="sidebar">
+          <h4>All projects · {flat.length}</h4>
+          {data.groups.map(g => (
+            <div key={g.id}>
+              <div className="sb-group-label">/ {g.label}</div>
+              {g.projects.map(p => (
+                <div
+                  key={p.id}
+                  className={'sb-item' + (p.id === active.id ? ' active' : '')}
+                  onClick={() => setActiveId(p.id)}
+                  onDoubleClick={() => onOpen(p)}
+                >
+                  <div className="top">
+                    <div className="name">{p.name}</div>
+                    <div className="sector">{p.sector}</div>
+                  </div>
+                  <div className="sub">{p.subtitle}</div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// VIEW: GRID
+// ============================================================
+function GridView({ data, onOpen, livePreview }) {
+  return (
+    <div className="view-grid">
+      {data.groups.map((g, gi) => (
+        <section key={g.id} className="grid-section">
+          <h3>
+            <span className="num">/ {String(gi + 1).padStart(2, '0')}</span>
+            {g.label}
+          </h3>
+          <p className="blurb">{g.blurb}</p>
+          <div className="grid">
+            {g.projects.map(p => (
+              <div key={p.id} className="card" onClick={() => onOpen(p)}>
+                <div className="preview">
+                  {livePreview && !p.noEmbed ? (
+                    <PreviewIframe url={p.url} title={p.name} />
+                  ) : (
+                    <PreviewFallback name={p.name} />
+                  )}
+                </div>
+                <div className="body">
+                  <div className="top">
+                    <div className="sector">{p.sector}</div>
+                    <div className="status-pill">
+                      <span className="dot" /> live
+                    </div>
+                  </div>
+                  <h4>{p.name}</h4>
+                  <div className="sub">{p.subtitle}</div>
+                  <p className="summary">{p.summary}</p>
+                  <div className="stack">
+                    {p.stack.slice(0, 3).map(s => (
+                      <span key={s} className="tag">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// DETAIL OVERLAY
+// ============================================================
+function Overlay({ project, onClose }) {
+  useEffect(() => {
+    const onEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [onClose]);
+
+  return (
+    <div className={'overlay' + (project ? ' open' : '')} onClick={onClose}>
+      <div className="overlay-panel" onClick={e => e.stopPropagation()}>
+        <button className="close" onClick={onClose} aria-label="Close">×</button>
+        <div className="preview-pane">
+          {project && !project.noEmbed && (
+            <iframe
+              src={project.url}
+              title={project.name}
+              referrerPolicy="no-referrer"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          )}
+          {project && project.noEmbed && (
+            <PreviewFallback name={project.name} />
+          )}
+        </div>
+        <div className="info-pane">
+          {project && (
+            <>
+              <div className="eyebrow">{project.sector} · {project.groupLabel}</div>
+              <h2>{project.name}</h2>
+              <p className="ovr-sub">{project.subtitle}</p>
+              <p className="ovr-summary">{project.summary}</p>
+
+              <div className="ovr-section">
+                <div className="lbl">Audience</div>
+                <div className="val">{project.for}</div>
+              </div>
+              <div className="ovr-section">
+                <div className="lbl">Why it matters</div>
+                <div className="val">{project.why}</div>
+              </div>
+              <div className="ovr-section">
+                <div className="lbl">Stack</div>
+                <div className="val ovr-stack">
+                  {project.stack.map(s => <span key={s} className="tag" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#8D8D92', background: '#FAFAFA', padding: '4px 10px', borderRadius: 999, border: '1px solid #E8E8EB' }}>{s}</span>)}
+                </div>
+              </div>
+              <div className="ovr-section">
+                <div className="lbl">Status</div>
+                <div className="val mono" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>
+                  <span style={{ color: '#22C55E' }}>●</span> {project.status}
+                </div>
+              </div>
+
+              <div className="ovr-actions">
+                <a href={project.url} target="_blank" rel="noreferrer" className="btn-cta">Visit site →</a>
+                {project.repo && (
+                  <a
+                    href={`https://github.com/${project.repo}`}
+                    target="_blank" rel="noreferrer"
+                    className="btn-secondary"
+                  >
+                    {project.repoPrivate ? 'Repo (private)' : 'View repo'}
+                  </a>
+                )}
+                {project.appUrl && (
+                  <a href={project.appUrl} target="_blank" rel="noreferrer" className="btn-secondary">App (auth) →</a>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// APP
+// ============================================================
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "view": "editorial",
+  "livePreviews": true,
+  "showStandingRule": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = window.useTweaks
+    ? window.useTweaks(TWEAK_DEFAULTS)
+    : [TWEAK_DEFAULTS, () => {}];
+
+  const data = window.SHOWCASE_DATA;
+  const flat = useMemo(() => flattenProjects(data.groups), [data]);
+  const [openProject, setOpenProject] = useState(null);
+
+  const totalProjects = flat.length;
+  const totalGroups = data.groups.length;
+
+  return (
+    <>
+      <div className="page">
+        <header className="topbar">
+          <div className="wordmark">
+            real minds, artificial intelligence
+            <em>— wisdom, amplified</em>
+          </div>
+          <nav className="topnav">
+            <a href="https://realmindsai.com.au/">realmindsai.com.au</a>
+            <a href="#contact">Book a call</a>
+          </nav>
+        </header>
+
+        <section className="mast">
+          <div>
+            <div className="eyebrow">
+              <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#22C55E' }} />
+              Showcase · 2026
+            </div>
+            <h1>
+              Twelve sites,<br />
+              one small <em>practice.</em>
+            </h1>
+            <p className="lede">
+              Everything below was designed, built and shipped by a two-person Melbourne consultancy with Claude Code as a third pair of hands. Civic tech, conservation, regtech, retail — same toolkit, very different problems.
+            </p>
+          </div>
+          <div className="mast-side">
+            <div className="row">
+              <span className="lbl">In production</span>
+              <span className="val mono"><span className="live-dot">●</span> {totalProjects} sites</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Groups</span>
+              <span className="val mono">{totalGroups}</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Custom domains</span>
+              <span className="val mono">5</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Avg. ship</span>
+              <span className="val mono">~ weeks, not quarters</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Built with</span>
+              <span className="val mono">Claude Code · human in loop</span>
+            </div>
+          </div>
+        </section>
+
+        {tweaks.showStandingRule && (
+          <div className="rule-strip">
+            <div className="lhs">
+              <span className="pulse" />
+              <span style={{ color: '#1A1B25', fontWeight: 600 }}>standing rule</span>
+              <span>—</span>
+              <span>Claude produces. Trace decides. Every artifact, no exceptions.</span>
+            </div>
+            <div>realmindsai.com.au · AI consulting · Melbourne</div>
+          </div>
+        )}
+
+        <div className="toolbar">
+          <div className="view-toggle" role="tablist" aria-label="Layout">
+            <button
+              className={tweaks.view === 'editorial' ? 'on' : ''}
+              onClick={() => setTweak('view', 'editorial')}
+            >Editorial</button>
+            <button
+              className={tweaks.view === 'index' ? 'on' : ''}
+              onClick={() => setTweak('view', 'index')}
+            >Index</button>
+            <button
+              className={tweaks.view === 'grid' ? 'on' : ''}
+              onClick={() => setTweak('view', 'grid')}
+            >Grid</button>
+          </div>
+          <div className="count-line">
+            {totalProjects} projects · {totalGroups} groups · last updated 2026-04-28
+          </div>
+        </div>
+
+        {tweaks.view === 'index' && <IndexView data={data} onOpen={setOpenProject} />}
+        {tweaks.view === 'editorial' && <EditorialView data={data} onOpen={setOpenProject} />}
+        {tweaks.view === 'grid' && <GridView data={data} onOpen={setOpenProject} livePreview={tweaks.livePreviews} />}
+
+        <footer className="foot" id="contact">
+          <div className="col">
+            <h5>What this is</h5>
+            <p>An honest inventory of every public site Real Minds AI has shipped — the consulting work, the tools, the teaching, and the lead-gen demo we built for NorthLink.</p>
+            <p>If something here looks like a problem you have, the next move is a half-hour call.</p>
+          </div>
+          <div className="col">
+            <h5>Built with</h5>
+            <p>Claude Code as a third pair of hands. Human in the loop on every artifact — that's the standing rule.</p>
+            <p>Stacks span Astro, WordPress, Python, vanilla HTML, Postgres, ABS data feeds and Chart.js.</p>
+          </div>
+          <div className="col">
+            <h5>Get in touch</h5>
+            <p><a href="mailto:hello@realmindsai.com.au">hello@realmindsai.com.au</a></p>
+            <p><a href="https://realmindsai.com.au/">realmindsai.com.au</a></p>
+            <p style={{ marginTop: 16, fontStyle: 'italic', color: '#8D8D92' }}>— wisdom, amplified</p>
+          </div>
+        </footer>
+      </div>
+
+      <Overlay project={openProject} onClose={() => setOpenProject(null)} />
+
+      {/* Tweaks panel */}
+      {window.TweaksPanel && (
+        <window.TweaksPanel title="Tweaks">
+          <window.TweakSection title="Layout">
+            <window.TweakRadio
+              label="View"
+              value={tweaks.view}
+              onChange={v => setTweak('view', v)}
+              options={[
+                { value: 'editorial', label: 'Editorial' },
+                { value: 'index', label: 'Index' },
+                { value: 'grid', label: 'Grid' },
+              ]}
+            />
+          </window.TweakSection>
+          <window.TweakSection title="Content">
+            <window.TweakToggle
+              label="Live previews in grid"
+              value={tweaks.livePreviews}
+              onChange={v => setTweak('livePreviews', v)}
+            />
+            <window.TweakToggle
+              label="Standing rule strip"
+              value={tweaks.showStandingRule}
+              onChange={v => setTweak('showStandingRule', v)}
+            />
+          </window.TweakSection>
+        </window.TweaksPanel>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
