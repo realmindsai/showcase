@@ -28,144 +28,6 @@ function PreviewFallback({ name }) {
 }
 
 // ============================================================
-// VIEW: INDEX (numbered sticky list)
-// ============================================================
-function IndexView({ data, onOpen }) {
-  return (
-    <div className="view-index">
-      {data.groups.map((g, gi) => (
-        <section key={g.id} className="group">
-          <div className="group-meta">
-            <div className="num">/ {String(gi + 1).padStart(2, '0')}</div>
-            <div className="accent" />
-            <h3>{g.label}</h3>
-            <p>{g.blurb}</p>
-            <div style={{ marginTop: 16, fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#8D8D92' }}>
-              {g.projects.length} project{g.projects.length === 1 ? '' : 's'}
-            </div>
-          </div>
-          <div>
-            {g.projects.map((p, pi) => (
-              <div key={p.id} className="idx-row" onClick={() => onOpen(p)}>
-                <div className="idx-num">{String(pi + 1).padStart(2, '0')}</div>
-                <div className="idx-name">
-                  {p.name}
-                  <span className="sub">{p.subtitle}</span>
-                </div>
-                <div className="idx-meta">
-                  <span className="lbl">For</span>
-                  {p.for}
-                </div>
-                <div className="idx-stack">
-                  {p.stack.slice(0, 3).join(' · ')}
-                </div>
-                <div className="idx-arrow">→</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
-// VIEW: EDITORIAL (featured + sidebar)
-// ============================================================
-function EditorialView({ data, onOpen }) {
-  const flat = flattenProjects(data.groups);
-  const featured = flat.filter(p => p.featured);
-  const initial = featured[0] || flat[0];
-  const [activeId, setActiveId] = useState(initial.id);
-  const active = flat.find(p => p.id === activeId) || initial;
-
-  return (
-    <div className="view-edit">
-      <div className="layout">
-        {/* FEATURE CARD */}
-        <div className="feature">
-          <div className="browser-chrome">
-            <div className="dot" />
-            <div className="dot" />
-            <div className="dot" />
-            <div className="url">{active.url.replace(/^https?:\/\//, '')}</div>
-          </div>
-          <div className="preview">
-            <PreviewIframe url={active.url} title={active.name} />
-          </div>
-          <div className="body">
-            <div className="eyebrow">
-              <span style={{ color: '#22C55E' }}>●</span>
-              {active.sector} · {active.groupLabel}
-            </div>
-            <h3>{active.name}</h3>
-            <div className="sub">{active.subtitle}</div>
-            <p className="summary">{active.summary}</p>
-            <div className="meta-grid">
-              <div>
-                <div className="lbl">For</div>
-                <div className="val">{active.for}</div>
-              </div>
-              <div>
-                <div className="lbl">Why it matters</div>
-                <div className="val">{active.why}</div>
-              </div>
-              <div>
-                <div className="lbl">Stack</div>
-                <div className="val mono" style={{ fontSize: 12 }}>{active.stack.join(' · ')}</div>
-              </div>
-              <div>
-                <div className="lbl">Status</div>
-                <div className="val mono" style={{ fontSize: 12 }}>
-                  <span style={{ color: '#22C55E' }}>●</span> {active.status}
-                </div>
-              </div>
-            </div>
-            <div className="actions">
-              <a href={active.url} target="_blank" rel="noreferrer" className="btn-cta">Visit site →</a>
-              {active.repo && (
-                <a
-                  href={`https://github.com/${active.repo}`}
-                  target="_blank" rel="noreferrer"
-                  className="btn-secondary"
-                >
-                  {active.repoPrivate ? 'Repo (private)' : 'View repo'}
-                </a>
-              )}
-              <button className="btn-secondary" onClick={() => onOpen(active)}>Details</button>
-            </div>
-          </div>
-        </div>
-
-        {/* SIDEBAR LIST */}
-        <aside className="sidebar">
-          <h4>All projects · {flat.length}</h4>
-          {data.groups.map(g => (
-            <div key={g.id}>
-              <div className="sb-group-label">/ {g.label}</div>
-              {g.projects.map(p => (
-                <div
-                  key={p.id}
-                  className={'sb-item' + (p.id === active.id ? ' active' : '')}
-                  onClick={() => setActiveId(p.id)}
-                  onDoubleClick={() => onOpen(p)}
-                >
-                  <div className="top">
-                    <div className="name">{p.name}</div>
-                    <div className="sector">{p.sector}</div>
-                  </div>
-                  <div className="sub">{p.subtitle}</div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
 // VIEW: GRID
 // ============================================================
 function GridView({ data, onOpen, livePreview }) {
@@ -181,6 +43,12 @@ function GridView({ data, onOpen, livePreview }) {
           <div className="grid">
             {g.projects.map(p => (
               <div key={p.id} className="card" onClick={() => onOpen(p)}>
+                <div className="browser-chrome">
+                  <div className="dot" />
+                  <div className="dot" />
+                  <div className="dot" />
+                  <div className="url">{p.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</div>
+                </div>
                 <div className="preview">
                   {livePreview && !p.noEmbed ? (
                     <PreviewIframe url={p.url} title={p.name} />
@@ -191,8 +59,13 @@ function GridView({ data, onOpen, livePreview }) {
                 <div className="body">
                   <div className="top">
                     <div className="sector">{p.sector}</div>
-                    <div className="status-pill">
-                      <span className="dot" /> live
+                    <div className="pills">
+                      {p.clientDomain && (
+                        <div className="pill pill-client" title="Client-owned domain (not RMAI)">client domain</div>
+                      )}
+                      <div className="status-pill">
+                        <span className="dot" /> live
+                      </div>
                     </div>
                   </div>
                   <h4>{p.name}</h4>
@@ -296,7 +169,6 @@ function Overlay({ project, onClose }) {
 // APP
 // ============================================================
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "view": "editorial",
   "livePreviews": true,
   "showStandingRule": true
 }/*EDITMODE-END*/;
@@ -312,6 +184,8 @@ function App() {
 
   const totalProjects = flat.length;
   const totalGroups = data.groups.length;
+  const rmaiDomains = flat.filter(p => /realmindsai\.com\.au/.test(p.url) && !p.clientDomain).length;
+  const clientDomains = flat.filter(p => p.clientDomain).length;
 
   return (
     <>
@@ -351,8 +225,12 @@ function App() {
               <span className="val mono">{totalGroups}</span>
             </div>
             <div className="row">
-              <span className="lbl">Custom domains</span>
-              <span className="val mono">5</span>
+              <span className="lbl">RMAI domains</span>
+              <span className="val mono">{rmaiDomains}</span>
+            </div>
+            <div className="row">
+              <span className="lbl">Client domains</span>
+              <span className="val mono">{clientDomains}</span>
             </div>
             <div className="row">
               <span className="lbl">Avg. ship</span>
@@ -378,28 +256,12 @@ function App() {
         )}
 
         <div className="toolbar">
-          <div className="view-toggle" role="tablist" aria-label="Layout">
-            <button
-              className={tweaks.view === 'editorial' ? 'on' : ''}
-              onClick={() => setTweak('view', 'editorial')}
-            >Editorial</button>
-            <button
-              className={tweaks.view === 'index' ? 'on' : ''}
-              onClick={() => setTweak('view', 'index')}
-            >Index</button>
-            <button
-              className={tweaks.view === 'grid' ? 'on' : ''}
-              onClick={() => setTweak('view', 'grid')}
-            >Grid</button>
-          </div>
           <div className="count-line">
             {totalProjects} projects · {totalGroups} groups · last updated 2026-04-28
           </div>
         </div>
 
-        {tweaks.view === 'index' && <IndexView data={data} onOpen={setOpenProject} />}
-        {tweaks.view === 'editorial' && <EditorialView data={data} onOpen={setOpenProject} />}
-        {tweaks.view === 'grid' && <GridView data={data} onOpen={setOpenProject} livePreview={tweaks.livePreviews} />}
+        <GridView data={data} onOpen={setOpenProject} livePreview={tweaks.livePreviews} />
 
         <footer className="foot" id="contact">
           <div className="col">
@@ -426,18 +288,6 @@ function App() {
       {/* Tweaks panel */}
       {window.TweaksPanel && (
         <window.TweaksPanel title="Tweaks">
-          <window.TweakSection title="Layout">
-            <window.TweakRadio
-              label="View"
-              value={tweaks.view}
-              onChange={v => setTweak('view', v)}
-              options={[
-                { value: 'editorial', label: 'Editorial' },
-                { value: 'index', label: 'Index' },
-                { value: 'grid', label: 'Grid' },
-              ]}
-            />
-          </window.TweakSection>
           <window.TweakSection title="Content">
             <window.TweakToggle
               label="Live previews in grid"
