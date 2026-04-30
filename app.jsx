@@ -20,6 +20,18 @@ function PreviewIframe({ url, title }) {
   );
 }
 
+function PreviewAnimated({ id, name }) {
+  // Pre-rendered slow animated WebP cycling through scroll positions of the site.
+  return (
+    <img
+      className="preview-animated"
+      src={`assets/previews/${id}.webp`}
+      alt={`${name} — animated preview`}
+      loading="lazy"
+    />
+  );
+}
+
 function PreviewFallback({ name }) {
   // Used when iframe is blocked or for visual variety
   return (
@@ -53,7 +65,7 @@ function GridView({ data, onOpen, livePreview }) {
                   {livePreview && !p.noEmbed ? (
                     <PreviewIframe url={p.url} title={p.name} />
                   ) : (
-                    <PreviewFallback name={p.name} />
+                    <PreviewAnimated id={p.id} name={p.name} />
                   )}
                 </div>
                 <div className="body">
@@ -169,7 +181,7 @@ function Overlay({ project, onClose }) {
 // APP
 // ============================================================
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "livePreviews": true,
+  "livePreviews": false,
   "showStandingRule": true
 }/*EDITMODE-END*/;
 
@@ -184,7 +196,10 @@ function App() {
 
   const totalProjects = flat.length;
   const totalGroups = data.groups.length;
-  const rmaiDomains = flat.filter(p => /realmindsai\.com\.au/.test(p.url) && !p.clientDomain).length;
+  const rmaiDomains = flat.filter(p =>
+    !p.clientDomain &&
+    (/realmindsai\.com\.au/.test(p.url) || /realmindsai\.com\.au/.test(p.appUrl || ''))
+  ).length;
   const clientDomains = flat.filter(p => p.clientDomain).length;
 
   return (
@@ -290,7 +305,7 @@ function App() {
         <window.TweaksPanel title="Tweaks">
           <window.TweakSection title="Content">
             <window.TweakToggle
-              label="Live previews in grid"
+              label="Live iframe previews (default: animated)"
               value={tweaks.livePreviews}
               onChange={v => setTweak('livePreviews', v)}
             />
