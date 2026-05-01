@@ -291,7 +291,7 @@ function App() {
           </div>
           <div className="col">
             <h5>Get in touch</h5>
-            <p><a href="mailto:hello@realmindsai.com.au">hello@realmindsai.com.au</a></p>
+            <p><a href="mailto:info@realmindsai.com.au">info@realmindsai.com.au</a></p>
             <p><a href="https://realmindsai.com.au/">realmindsai.com.au</a></p>
             <p style={{ marginTop: 16, fontStyle: 'italic', color: '#8D8D92' }}>— wisdom, amplified</p>
           </div>
