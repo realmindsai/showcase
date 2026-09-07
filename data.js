@@ -152,20 +152,6 @@ window.SHOWCASE_DATA = {
       blurb: "Bespoke utility sites — small surface, real usage.",
       projects: [
         {
-          id: "arena",
-          name: "Arena Demand Scout",
-          subtitle: "Childcare-centre demand modelling",
-          url: "https://realmindsai.github.io/arena-demand-scout/",
-          repo: "realmindsai/arena-demand-scout",
-          year: "2026",
-          sector: "Property / demographics",
-          stack: ["Dashboard", "ABS data"],
-          status: "live",
-          summary: "Dashboard comparing Arena REIT's childcare-centre portfolio against ABS childcare demand projections.",
-          for: "Arena REIT analysts",
-          why: "RMAI client deliverable from W33 (Justin Bailey, Arena REIT).",
-        },
-        {
           id: "just-ask",
           name: "Just Ask Your Computer",
           subtitle: "AI-tools setup guide",
